@@ -1,0 +1,290 @@
+---
+title: "data_exploration"
+format: html
+editor: visual
+---
+
+```{r}
+library(tidyverse)
+library(MASS)
+library(pscl)
+```
+
+```{r}
+bird <- read_csv("data/ForgBout_00_01_07_08.csv")
+```
+
+info abt variables: 
+- species: species of bird
+- duration: how long it took
+- attempts: the number of attempts to get food
+- Rinter (receiving aggression from same species)
+- Rintra (receiving aggression from different species)
+- linter (same species initiating aggression)
+- lintra (different species initiating aggression)
+- successes: successfully caught food
+
+```{r}
+head(bird, 100)
+```
+
+```{r}
+hierarchy_fct <- c("Phleg", "M. fort", "Rheg", "D. mer", "G. sal") # most dominant to least dominant
+
+bird_ind <- bird %>%
+  mutate(
+    rsa = (Rinter > 0),
+    roa = (Rintra > 0),
+    isa = (Iinter > 0),
+    ioa = (Iintra > 0),
+    # properly order species based on ecological hierarchy explained in paper
+    species = fct_relevel(species, hierarchy_fct)
+    ) 
+
+
+bird_zi <-  bird %>%
+  mutate(
+    rsa = ifelse(Rinter > 0, 1, 0),
+    roa = ifelse(Rintra > 0, 1, 0),
+    isa = ifelse(Iinter > 0, 1, 0),
+    ioa = ifelse(Iintra > 0, 1, 0),
+    # properly order species based on ecological hierarchy explained in paper
+    species = fct_relevel(species, hierarchy_fct)
+    ) 
+
+head(bird_zi)
+```
+
+
+```{r}
+species_interaction_count <- bird_ind %>%
+  group_by(species) %>%
+  summarise(
+    rsa = sum(Rinter),
+    roa = sum(Rintra),
+    isa = sum(Iinter),
+    ioa = sum(Iintra)
+  )
+species_interaction
+```
+```{r}
+species_interaction_ind <- bird_ind %>%
+  group_by(species) %>%
+  summarise(
+    rsa = sum(Rinter > 0),
+    roa = sum(Rintra > 0),
+    isa = sum(Iinter > 0),
+    ioa = sum(Iintra > 0)
+  )
+species_interaction_count
+```
+
+Could make side by side boxplots to visualize the relationships between species and these interaction variables. 
+
+```{r}
+ggplot(bird_ind, aes(x = species, y = rsa, fill = species)) +
+  geom_bar(stat = "identity") +
+  labs(x = "Species", y = "Rintra Count") +
+  theme_minimal()
+
+ggplot(bird_ind, aes(x = species, y = roa, fill = species)) +
+  geom_bar(stat = "identity") +
+  labs(x = "Species", y = "Rinter Count") +
+  theme_minimal()
+
+ggplot(bird_ind, aes(x = species, y = isa, fill = species)) +
+  geom_bar(stat = "identity") +
+  labs(x = "Species", y = "Lintra Count") +
+  theme_minimal()
+
+ggplot(bird_ind, aes(x = species, y = ioa, fill = species)) +
+  geom_bar(stat = "identity") +
+  labs(x = "Species", y = "Linter Count") +
+  theme_minimal()
+```
+
+
+Assumptions for poisson model:
+* Poisson Response The response variable is a count per unit of time or space, described by a Poisson distribution.
+* Independence The observations must be independent of one another.
+* Mean=Variance By definition, the mean of a Poisson random variable must be equal to its variance.
+* Linearity The log of the mean rate, log(λ), must be a linear function of x.
+
+```{r}
+head(bird)
+```
+
+# Best Model Selection
+
+Goal of Model: comparison between two species and how it impacts species aggression; uses interaction terms
+
+```{r}
+pois_full <- glm(Successes ~ species + rsa + roa + isa + ioa + species:rsa + species:roa + species:isa + species:ioa, family = "poisson", data = bird_ind)
+summary(pois_full)
+```
+Species M. Fort:
+```{r}
+exp(0.26989)
+```
+The success rate for M. Fort is roughly 1.3 times less than that of Phleg's, holding all variables constant.3
+
+Species Rheg
+```{r}
+exp(0.146)
+```
+The success rate for Rheg is roughly 1.15 times that of Phleg's, holding all variables constant. 
+
+Interaction term MFort:rsa
+```{r}
+exp(1.35879)
+```
+
+The coefficient of 1.35879 suggests that, when "speciesM. fort" is recieving same species aggression, the success rate increases by 3.89 times in comparison to Phleg, holding all other variables constant.
+
+
+
+```{r}
+quasi_full <- glm(Successes ~ species + rsa + roa + isa + ioa + species*rsa + species*roa + species*isa + species*ioa, family = "quasipoisson", data = bird_ind)
+summary(quasi_full)
+```
+
+Dispersion parameter is not much larger than 1, meaning there isn't much overdispersion to account for. If we multiply each of the standard errors of the original poisson model to the sqrt(dispersion parameter), there is not much of a change, as can be seen in the model when compared to the poisson model. 
+
+
+```{r}
+nbinom_full <- glm.nb(Successes ~ species + rsa + roa + isa + ioa + species*rsa + species*roa + species*isa + species*ioa, data = bird_ind)
+summary(nbinom_full)
+```
+
+Interpretation of Coefficients:
+
+- the coefficient for "speciesM. fort" is -0.27162. This means that, holding all other variables constant, the expected log count of successes decreases by 0.27162 when comparing the "speciesM. fort" group to phleg.
+- the expected log count of successes for Rheg increases by 0.14606 when comparing it to Phleg.
+
+
+```{r}
+zip_full <- zeroinfl(Successes ~ species + rsa + roa + isa + ioa | 1, data = bird_ind)
+summary(zip_full)
+
+zinb_full <- zeroinfl(Successes ~ species + rsa + roa + isa + ioa + species*rsa + species*roa | 1, dist = "negbin", data = bird_ind)
+summary(zinb_full)
+```
+
+We can't fit the zero inflated model we want because we have
+
+# Look at shape of data: 
+
+```{r}
+bird %>%
+  group_by(species) %>%
+  summarize(
+    meanRinter = mean(Rinter),
+    meanRintra = mean(Rintra),
+    meanIinter = mean(Iinter),
+    meanIntra = mean(Iintra),
+    sdRinter = sd(Rinter),
+    sdRintra = sd(Rintra),
+    sdIinter = sd(Iinter),
+    sdIintra = sd(Iintra),
+    n = n()
+  )
+```
+
+Standard deviation counts are higher than means suggesting our mean and variances are not equal....Poisson might not be the best model. Negative binomial does account for overdispersion where the variance is allowed to be greater than the mean. Quasi poisson does not strike me as any different from my poisson model.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Checking predictor significance
+
+```{r}
+pois_norsa <- glm(Successes ~ species + roa + isa + ioa + species*roa + species*isa + species*ioa, family = "poisson", data = bird_ind)
+anova(pois_norsa, pois_full, test = "Chisq")
+
+pois_noroa <- glm(Successes ~ species + rsa + isa + ioa + species*rsa + species*isa + species*ioa, family = "poisson", data = bird_ind)
+anova(pois_noroa, pois_full, test = "Chisq")
+
+pois_noisa <- glm(Successes ~ species + rsa + roa + ioa + species*rsa + species*roa + species*ioa, family = "poisson", data = bird_ind)
+anova(pois_noisa, pois_full, test = "Chisq")
+
+pois_noioa <- glm(Successes ~ species + rsa + roa + isa + species*rsa + species*roa + species*isa , family = "poisson", data = bird_ind)
+anova(pois_noioa, pois_full, test = "Chisq")
+```
+
+```{r}
+nb_norsa <- glm.nb(Successes ~ species + roa + isa + ioa + species*roa + species*isa + species*ioa, data = bird_ind)
+
+nb_noroa <- glm.nb(Successes ~ species + rsa + isa + ioa + species*rsa + species*isa + species*ioa, data = bird_ind)
+
+nb_noisa <- glm.nb(Successes ~ species + rsa + roa + ioa + species*rsa + species*roa + species*ioa, data = bird_ind)
+
+nb_noioa <- glm.nb(Successes ~ species + rsa + roa + isa + species*rsa + species*roa + species*isa, data = bird_ind)
+
+
+anova(nb_norsa, nbinom_full)
+anova(nb_noroa, nbinom_full)
+anova(nb_noisa, nbinom_full)
+anova(nb_noioa, nbinom_full)
+```
+
+```{r}
+summary(nb_norsa)
+```
+
+
+
+
+
+## Fitting Best Model: Negative Binomial
+```{r}
+nbinom_full <- glm.nb(Successes ~ species + rsa + roa + isa + ioa + species*rsa + species*roa + species*isa + species*ioa, data = bird_ind)
+summary(nbinom_full)
+```
+
+
+```{r}
+step.model <- step(nbinom_full,direction="backward")
+```
+
+
+# Zero Inflated Model Comparison
+
+```{r}
+zinb_model <- zeroinfl(Successes ~ species + rsa + roa + species*rsa + species*roa, data = bird_ind, dist = "negbin")
+summary(zinb_model)
+```
+
