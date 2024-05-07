@@ -8,21 +8,14 @@ editor: visual
 library(tidyverse)
 library(MASS)
 library(pscl)
+library(multcomp)
 ```
 
 ```{r}
 bird <- read_csv("data/ForgBout_00_01_07_08.csv")
 ```
 
-info abt variables: 
-- species: species of bird
-- duration: how long it took
-- attempts: the number of attempts to get food
-- Rinter (receiving aggression from same species)
-- Rintra (receiving aggression from different species)
-- linter (same species initiating aggression)
-- lintra (different species initiating aggression)
-- successes: successfully caught food
+info abt variables: - species: species of bird - duration: how long it took - attempts: the number of attempts to get food - Rinter (receiving aggression from same species) - Rintra (receiving aggression from different species) - linter (same species initiating aggression) - lintra (different species initiating aggression) - successes: successfully caught food
 
 ```{r}
 head(bird, 100)
@@ -38,8 +31,11 @@ bird_ind <- bird %>%
     isa = (Iinter > 0),
     ioa = (Iintra > 0),
     # properly order species based on ecological hierarchy explained in paper
-    species = fct_relevel(species, hierarchy_fct)
+    species = factor(species, hierarchy_fct)
     ) 
+
+head(bird_ind)
+
 
 
 bird_zi <-  bird %>%
@@ -55,7 +51,6 @@ bird_zi <-  bird %>%
 head(bird_zi)
 ```
 
-
 ```{r}
 species_interaction_count <- bird_ind %>%
   group_by(species) %>%
@@ -67,6 +62,7 @@ species_interaction_count <- bird_ind %>%
   )
 species_interaction
 ```
+
 ```{r}
 species_interaction_ind <- bird_ind %>%
   group_by(species) %>%
@@ -79,7 +75,7 @@ species_interaction_ind <- bird_ind %>%
 species_interaction_count
 ```
 
-Could make side by side boxplots to visualize the relationships between species and these interaction variables. 
+Could make side by side boxplots to visualize the relationships between species and these interaction variables.
 
 ```{r}
 ggplot(bird_ind, aes(x = species, y = rsa, fill = species)) +
@@ -103,12 +99,7 @@ ggplot(bird_ind, aes(x = species, y = ioa, fill = species)) +
   theme_minimal()
 ```
 
-
-Assumptions for poisson model:
-* Poisson Response The response variable is a count per unit of time or space, described by a Poisson distribution.
-* Independence The observations must be independent of one another.
-* Mean=Variance By definition, the mean of a Poisson random variable must be equal to its variance.
-* Linearity The log of the mean rate, log(λ), must be a linear function of x.
+Assumptions for poisson model: \* Poisson Response The response variable is a count per unit of time or space, described by a Poisson distribution. \* Independence The observations must be independent of one another. \* Mean=Variance By definition, the mean of a Poisson random variable must be equal to its variance. \* Linearity The log of the mean rate, log(λ), must be a linear function of x.
 
 ```{r}
 head(bird)
@@ -122,34 +113,37 @@ Goal of Model: comparison between two species and how it impacts species aggress
 pois_full <- glm(Successes ~ species + rsa + roa + isa + ioa + species:rsa + species:roa + species:isa + species:ioa, family = "poisson", data = bird_ind)
 summary(pois_full)
 ```
+
 Species M. Fort:
+
 ```{r}
 exp(0.26989)
 ```
+
 The success rate for M. Fort is roughly 1.3 times less than that of Phleg's, holding all variables constant.3
 
 Species Rheg
+
 ```{r}
 exp(0.146)
 ```
-The success rate for Rheg is roughly 1.15 times that of Phleg's, holding all variables constant. 
+
+The success rate for Rheg is roughly 1.15 times that of Phleg's, holding all variables constant.
 
 Interaction term MFort:rsa
+
 ```{r}
 exp(1.35879)
 ```
 
 The coefficient of 1.35879 suggests that, when "speciesM. fort" is recieving same species aggression, the success rate increases by 3.89 times in comparison to Phleg, holding all other variables constant.
 
-
-
 ```{r}
 quasi_full <- glm(Successes ~ species + rsa + roa + isa + ioa + species*rsa + species*roa + species*isa + species*ioa, family = "quasipoisson", data = bird_ind)
 summary(quasi_full)
 ```
 
-Dispersion parameter is not much larger than 1, meaning there isn't much overdispersion to account for. If we multiply each of the standard errors of the original poisson model to the sqrt(dispersion parameter), there is not much of a change, as can be seen in the model when compared to the poisson model. 
-
+Dispersion parameter is not much larger than 1, meaning there isn't much overdispersion to account for. If we multiply each of the standard errors of the original poisson model to the sqrt(dispersion parameter), there is not much of a change, as can be seen in the model when compared to the poisson model.
 
 ```{r}
 nbinom_full <- glm.nb(Successes ~ species + rsa + roa + isa + ioa + species*rsa + species*roa + species*isa + species*ioa, data = bird_ind)
@@ -158,9 +152,8 @@ summary(nbinom_full)
 
 Interpretation of Coefficients:
 
-- the coefficient for "speciesM. fort" is -0.27162. This means that, holding all other variables constant, the expected log count of successes decreases by 0.27162 when comparing the "speciesM. fort" group to phleg.
-- the expected log count of successes for Rheg increases by 0.14606 when comparing it to Phleg.
-
+-   the coefficient for "speciesM. fort" is -0.27162. This means that, holding all other variables constant, the expected log count of successes decreases by 0.27162 when comparing the "speciesM. fort" group to phleg.
+-   the expected log count of successes for Rheg increases by 0.14606 when comparing it to Phleg.
 
 ```{r}
 zip_full <- zeroinfl(Successes ~ species + rsa + roa + isa + ioa | 1, data = bird_ind)
@@ -172,7 +165,7 @@ summary(zinb_full)
 
 We can't fit the zero inflated model we want because we have
 
-# Look at shape of data: 
+# Look at shape of data:
 
 ```{r}
 bird %>%
@@ -190,101 +183,58 @@ bird %>%
   )
 ```
 
-Standard deviation counts are higher than means suggesting our mean and variances are not equal....Poisson might not be the best model. Negative binomial does account for overdispersion where the variance is allowed to be greater than the mean. Quasi poisson does not strike me as any different from my poisson model.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# Checking predictor significance
-
-```{r}
-pois_norsa <- glm(Successes ~ species + roa + isa + ioa + species*roa + species*isa + species*ioa, family = "poisson", data = bird_ind)
-anova(pois_norsa, pois_full, test = "Chisq")
-
-pois_noroa <- glm(Successes ~ species + rsa + isa + ioa + species*rsa + species*isa + species*ioa, family = "poisson", data = bird_ind)
-anova(pois_noroa, pois_full, test = "Chisq")
-
-pois_noisa <- glm(Successes ~ species + rsa + roa + ioa + species*rsa + species*roa + species*ioa, family = "poisson", data = bird_ind)
-anova(pois_noisa, pois_full, test = "Chisq")
-
-pois_noioa <- glm(Successes ~ species + rsa + roa + isa + species*rsa + species*roa + species*isa , family = "poisson", data = bird_ind)
-anova(pois_noioa, pois_full, test = "Chisq")
-```
-
-```{r}
-nb_norsa <- glm.nb(Successes ~ species + roa + isa + ioa + species*roa + species*isa + species*ioa, data = bird_ind)
-
-nb_noroa <- glm.nb(Successes ~ species + rsa + isa + ioa + species*rsa + species*isa + species*ioa, data = bird_ind)
-
-nb_noisa <- glm.nb(Successes ~ species + rsa + roa + ioa + species*rsa + species*roa + species*ioa, data = bird_ind)
-
-nb_noioa <- glm.nb(Successes ~ species + rsa + roa + isa + species*rsa + species*roa + species*isa, data = bird_ind)
-
-
-anova(nb_norsa, nbinom_full)
-anova(nb_noroa, nbinom_full)
-anova(nb_noisa, nbinom_full)
-anova(nb_noioa, nbinom_full)
-```
-
-```{r}
-summary(nb_norsa)
-```
-
-
-
-
+Standard deviation counts are higher than means suggesting our mean and variances are not equal....Poisson might not be the best model. Negative binomial does account for overdispersion where the variance is allowed to be greater than the mean. Quasi poisson does not strike me as any different from the poisson model.
 
 ## Fitting Best Model: Negative Binomial
+
 ```{r}
 nbinom_full <- glm.nb(Successes ~ species + rsa + roa + isa + ioa + species*rsa + species*roa + species*isa + species*ioa, data = bird_ind)
 summary(nbinom_full)
+plot(nbinom_full)
 ```
 
+Can use AIC for model selection as long as the models are in the same family.
 
 ```{r}
-step.model <- step(nbinom_full,direction="backward")
+step.model <- step(nbinom_full, direction="both")
 ```
 
+## best model candidates
+
+```{r}
+bestmod1 <- glm.nb(Successes ~ species + rsa + ioa + species:rsa, data = bird_ind)
+bestmod2 <- glm.nb(Successes ~ species + rsa + species:rsa, data = bird_ind)
+summary(bestmod1)
+summary(bestmod2)
+```
+
+Since we don't see a large difference between these two potential candidates, we might choose the simplest option.
+
+```{r}
+gof.pvalue = 1 - pchisq(bestmod2$deviance, bestmod2$df.residual)
+gof.pvalue
+```
+
+Model does not fit the data well...
 
 # Zero Inflated Model Comparison
 
 ```{r}
-zinb_model <- zeroinfl(Successes ~ species + rsa + roa + species*rsa + species*roa, data = bird_ind, dist = "negbin")
+zinb_model <- zeroinfl(Successes ~ species + rsa + species:rsa | 1, data = bird_ind, dist = "negbin")
 summary(zinb_model)
 ```
 
+```{r}
+vuong(bestmod2, zinb_model)
+vuong(zinb_model, bestmod2)
+```
+
+positive z-scores indicate that bestmod2 is better.
+
+# Best Model Interpretation
+
+series of pairwise comparisons across all the interactions
+
+```{r}
+mult_comp <- summary(glht(bestmod2, mcp(species:rsa="Tukey")))
+```

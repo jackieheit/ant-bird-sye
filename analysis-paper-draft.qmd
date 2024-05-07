@@ -1,0 +1,43 @@
+---
+title: "ant-bird-success-analysis"
+format: html
+editor: visual
+---
+
+methods: - brief explanation of how we came to best model - after data, \# Comparison of Mean Foraging Success Among Five Syntopic Species of Obligate Army-Ant-Following Peruvian Birds
+
+## Abstract
+
+This analysis compares whether interference competition among five syntopic obligate army-ant following bird species in Peru influences their individual mean foraging success. By employing negative binomial and logisitic regression models, I aimed to understand how behavioral interactions with conspecifics (belonging to same species) or heterospecifics (belonging to different species) affect the birds' foraging abilities, if at all. The dataset comprises of 1497 observations collected from Cocha Casha Biological Station, Manu National Park, Peru, during various periods from 2000 to 2008.These observational records encompass foraging behavior, aggression interactions, and successful food captures.The studied bird species include Phlegopsis nigromaculata (Black-Spotted Bare-eye), Myrmeciza fortis (Sooty antbird), Rhegmatorhina melanosticta (Hairy-crested antbird), Dendrocincla merula (White-chinned woodcreeper), and Gymnopithys salvini (white-throated ant bird), which rely on army ants to flush prety and forage exclusively at army ant swarm fronts. Model selection and predictor significance was performed using R. Results indicated only the signicicance of recieving same-species aggression (rsa) with Rhegmatorhina melanosticta showing a higher log mean foraging success than Myrmeciza fortis when neither species recieved such aggression.
+
+## Introduction
+
+## Data Collection (revise section a bit)
+
+The dataset used in this study consists of 1497 observations related to the foraging behavior of five syntopic obligate army-ant following bird species in Amazonian Peru. Data collection was conducted at the Cocha Cashu Biological Station, Manu National Park, Peru, spanning from October 2000 to February 2001, May to June 2007, and June to July 2008.
+
+Population of Interest (would probably be in the introduction) The population of interest in this dataset consists of obligate army-ant following bird species, namely Phlegopsis nigromaculata, Myrmeciza fortis, Rhegmatorhina melanosticta, Gymnopithys salvini, and Dendrocincla merula. These species rely on army ants to flush prey and forage exclusively at army ant swarm fronts.
+
+Features in the Dataset The dataset includes observational records of foraging behavior and aggression interactions among the bird species. The following features are included:
+
+Species: Species of bird observed Duration: Duration of observation Attempts: Number of attempts to obtain food Rinter: Receiving aggression from the same species Rintra: Receiving aggression from different species Iinter: Initiating aggression towards the same species Iintra: Initiating aggression towards different species Successes: Number of successful food captures
+
+These features were collected through direct observations of individual birds as they interacted with ant swarms. Additionally, indicator variables were created for the four behavioral variables to facilitate analysis.
+
+## Modeling Approach
+
+### Overview of GLMs
+
+(introduce why to use glm, what they are, specific application to dataset, later how we found the model)
+
+why and what are we using to do this analysis. Mathmatical equations (ex population models like in 213 but for negbinom).
+
+In this section, I first discuss the background and characteristics of the dataset used for this analysis. I then provide a brief background of the chosen model type, negative binomial, as well as list the statistical processes used in determining optimal model and feature selection. All of these methods were implemented with the open source R programming language.
+
+## Results (should include subsections)
+
+### emmeans
+
+The final model that we have; walking through analysis on the model and interpreting results.
+
+## Discussion

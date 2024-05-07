@@ -1,0 +1,92 @@
+---
+title: "Best Model Interpretation for Successes"
+format: html
+editor: visual
+---
+
+```{r}
+library(emmeans)
+```
+
+```{r}
+bird <- read_csv("data/ForgBout_00_01_07_08.csv")
+hierarchy_fct <- c("Phleg", "M. fort", "Rheg", "D. mer", "G. sal") # most dominant to least dominant
+
+bird_ind <- bird %>%
+  mutate(
+    rsa = (Rinter > 0),
+    roa = (Rintra > 0),
+    isa = (Iinter > 0),
+    ioa = (Iintra > 0),
+    # properly order species based on ecological hierarchy explained in paper
+    species = factor(species, hierarchy_fct)
+    ) 
+bird_ind$species <- factor(bird_ind$species)
+head(bird_ind)
+
+levels(bird_ind$species)
+
+```
+
+# Best Model Interpretation
+
+Best Model:
+
+```{r}
+bestmod <- glm.nb(Successes ~ species + rsa + species*rsa, data = bird_ind)
+```
+
+series of pairwise comparisons across all the interactions
+
+```{r}
+best.pw <- pairs(emmeans(bestmod, ~ rsa | species))
+best.pw
+```
+
+```{r}
+test(best.pw, by = NULL, adjust = "tukey", cross.adjust = "bonferroni")
+```
+
+```{r}
+# emmip(bestmod, rsa ~ species | species)
+emmip(bestmod, species ~ rsa | rsa)
+```
+
+log mean number of successes which is what the linear prediction is doing, its the log of the mean of the successes M. Fort having more successes when recieving same species aggression. Phleg might be "busy fighting" instead of getting food; Mfort might be defending and also getting more successes/food
+
+those that have parallel relationships between false and true, the impact of rsa might be less impactful (higher p-values)
+
+```{r}
+emm_s.t <- emmeans(bestmod, pairwise ~ species | rsa)
+emm_s.t
+```
+
+```{r}
+bird.emm <- emmeans(bestmod, ~ species * rsa)
+bird.cont <- contrast(bird.emm, "consec", simple = "each", combine = TRUE, adjust = "mvt")
+```
+
+when comparing the log mean of successes for Rheg and Mfort, Rheg had a log mean of 0.4013 higher than that of Mfort when neither recieving same species aggression.
+
+```{r}
+plot(bird.cont) + geom_vline(xintercept = 0)
+```
+
+Any interval containing 0 is not significant. Therefore, D.Mer is less than Rheg, and Rheg is greater than M. Fort. n
+
+```{r, fig.height=10}
+# Estimate marginal means for the interaction
+emm_int <- emmeans(bestmod, specs = ~ species * rsa)
+
+# Pairwise comparisons with adjustment for multiple testing
+comp <- contrast(emm_int, method = "pairwise", adjust = "bonferroni")
+summary(comp)
+
+# Visualization
+plot(comp)
+
+```
+
+```{r}
+mult_comp <- summary(glht(bestmod, mcp(species:rsa="Tukey")))
+```

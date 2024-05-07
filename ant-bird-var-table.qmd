@@ -1,0 +1,32 @@
+---
+title: "ant-bird-paper"
+format: html
+editor: visual
+---
+
++-----------+---------+--------------------------------------------------------+---------+
+| Variable  | Type    | Description                                            | Units   |
++===========+=========+========================================================+=========+
+| Species   | Factor  | -   Type of bird species                               |         |
+|           |         |                                                        |         |
++-----------+---------+--------------------------------------------------------+---------+
+| attempts  | Integer | -   Number of foraging attempts                        |         |
+|           |         |                                                        |         |
++-----------+---------+--------------------------------------------------------+---------+
+| rsa       | Boolean | -   whether a bird received same species aggression    |         |
++-----------+---------+--------------------------------------------------------+---------+
+| roa       | Boolean | -   whether a bird received outside species aggression |         |
++-----------+---------+--------------------------------------------------------+---------+
+| isa       | Boolean | -   whether a bird delivered same species aggression   |         |
++-----------+---------+--------------------------------------------------------+---------+
+| ioa       | Boolean | -   whether a bird delivered outer species aggression  |         |
++-----------+---------+--------------------------------------------------------+---------+
+| Successes | Integer | Number of successes for a given observation            |         |
++-----------+---------+--------------------------------------------------------+---------+
+
+: Variables used in analysis
+
+```{r}
+tidy_output
+tidy_output_a
+```

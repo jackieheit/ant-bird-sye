@@ -1,0 +1,62 @@
+---
+title: "logistic model"
+format: html
+editor: visual
+---
+
+# We're unable to use the logistic model due to NA values in the categories of some of our interaction variables
+# we also didn't find any of our interaction terms to be significant which poses threats for our hypothesis
+
+```{r}
+library(tidyverse)
+library(ResourceSelection)
+
+hierarchy_fct <- c("Phleg", "M. fort", "Rheg", "D. mer", "G. sal") # most dominant to least dominant
+bird_log <- bird_ind %>%
+  mutate(
+    Failures = attempts - Successes,
+    species = factor(species, hierarchy_fct)
+  )
+
+head(bird)
+```
+
+```{r}
+mod1 = glm(cbind(Successes, Failures) ~ rsa + rsa*species + roa + roa*species + isa + isa*species + ioa*species, family="binomial", 
+           data=bird)
+summary(mod1)
+```
+
+```{r}
+confint(mod1)
+```
+
+```{r}
+step(mod1)
+```
+
+The log odds decreases when they are initiating aggression on another species.
+
+Try model with ioa interaction added.
+
+```{r}
+anova(glm(formula = cbind(Successes, Failures) ~ species + ioa, family = "binomial", 
+    data = bird), test = "Chisq")
+```
+```{r}
+log_best <- glm(formula = cbind(Successes, Failures) ~ species + ioa, family = "binomial", 
+    data = bird)
+summary(log_best)
+```
+
+
+```{r}
+anova(mod1, test = "Chisq")
+```
+
+```{r}
+hoslem.test(mod1$y, fitted(mod1))
+```
+
+
+
